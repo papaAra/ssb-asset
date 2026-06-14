@@ -1146,6 +1146,15 @@ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredP
 window.addEventListener('appinstalled',()=>{ document.getElementById('install-banner').style.display='none'; });
 function triggerInstall(){ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById('install-banner').style.display='none'; }); } }
 
+// ─── SERVICE WORKER (OFFLINE) ────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/ssb-asset/sw.js', {scope:'/ssb-asset/'})
+      .then(()=>console.log('SW registered - offline ready'))
+      .catch(()=>console.log('SW registration failed'));
+  });
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────
 seedDemo();
 rebuildFilterSelects();
