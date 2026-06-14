@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1565C0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SSB Assets">
+<title>SSB Asset Manager v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- QR Generator -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- QR Scanner -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --blue-50:#E3F2FD;--blue-100:#BBDEFB;--blue-200:#90CAF9;
+  --blue-500:#2196F3;--blue-600:#1E88E5;--blue-700:#1565C0;--blue-800:#0D47A1;
+  --bg:#0A0F1E;--surface:#111827;--surface2:#1A2236;--surface3:#243047;
+  --border:#1E2D45;--border2:#2A3F5F;
+  --text:#F0F6FF;--text2:#8BA3C4;--text3:#4A6480;
+  --green:#10B981;--yellow:#F59E0B;--red:#EF4444;--purple:#8B5CF6;
+  --radius:12px;--radius-sm:8px;--shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:14px}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none;border:none}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;position:relative}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:88px;display:none}
+.screen.active{display:block}
+.screen::-webkit-scrollbar{display:none}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-left{display:flex;align-items:center;gap:8px}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text)}
+.topbar-ver{font-size:10px;font-weight:500;background:var(--blue-700);color:var(--blue-100);padding:2px 7px;border-radius:20px}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.icon-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:.15s}
+.icon-btn:active{background:var(--blue-700);color:white}
+.lang-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);z-index:20;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 7px;color:var(--text3);font-size:9px;font-weight:500;background:none;border:none;cursor:pointer;transition:.15s}
+.nav-btn svg{width:20px;height:20px;stroke-width:1.8}
+.nav-btn.active{color:var(--blue-500)}
+.nav-btn.active svg *{stroke:var(--blue-500)}
+.nav-btn.scan-btn{color:var(--blue-400)}
+.nav-scan-center{width:46px;height:46px;border-radius:50%;background:var(--blue-600);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:-18px;box-shadow:0 2px 12px rgba(33,150,243,.5);border:3px solid var(--bg);gap:2px;font-size:9px}
+.nav-scan-center svg{width:20px;height:20px;stroke-width:2}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.p16{padding:16px}
+.section-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.15s}
+.stat-card:active{transform:scale(.97)}
+.stat-val{font-size:28px;font-weight:700;line-height:1}
+.stat-label{font-size:11px;color:var(--text2);margin-top:4px}
+.stat-card.s-blue{border-color:var(--blue-700);background:rgba(21,101,192,.1);color:var(--blue-200)}
+.stat-card.s-green{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.08);color:var(--green)}
+.stat-card.s-red{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:var(--red)}
+.stat-card.s-yellow{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:var(--yellow)}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none;margin-bottom:4px}
+.filter-bar::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:12px;font-weight:500;padding:6px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:.15s}
+.chip.active{background:var(--blue-700);border-color:var(--blue-600);color:white}
+
+/* FILTER PANEL */
+.filter-panel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;display:none}
+.filter-panel.open{display:block}
+.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.filter-select{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-size:12px;padding:8px 10px;border-radius:8px}
+.filter-select option{background:var(--surface)}
+.filter-actions{display:flex;gap:8px}
+.btn-filter-apply{flex:1;background:var(--blue-600);color:white;font-size:12px;font-weight:600;padding:9px;border-radius:8px;border:none;cursor:pointer}
+.btn-filter-reset{background:var(--surface);border:1px solid var(--border2);color:var(--text2);font-size:12px;padding:9px 14px;border-radius:8px;cursor:pointer}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-size:14px;padding:11px 40px 11px 40px;border-radius:var(--radius-sm);transition:.2s}
+.search-input:focus{border-color:var(--blue-500)}
+.search-input::placeholder{color:var(--text3)}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+.filter-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;font-size:16px}
+.filter-toggle.has-filter{color:var(--blue-500)}
+
+/* ASSET ITEM */
+.asset-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:9px;display:flex;gap:11px;align-items:flex-start;cursor:pointer;transition:.15s;-webkit-user-select:none;user-select:none}
+.asset-item:active{background:var(--surface2);transform:scale(.99)}
+.asset-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.asset-info{flex:1;min-width:0}
+.asset-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asset-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.asset-meta{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;align-items:center}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:20px}
+.badge-active{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-broken{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-borrowed{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-storage{background:rgba(139,92,246,.15);color:var(--purple)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.asset-sn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:4px}
+
+/* FAB */
+.fab{position:fixed;bottom:84px;right:16px;width:50px;height:50px;border-radius:50%;background:var(--blue-600);color:white;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:15;border:none;cursor:pointer;transition:.2s}
+.fab:active{transform:scale(.92)}
+
+/* SHEET */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:30;display:none;backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:93dvh;overflow-y:auto;padding:20px 16px 44px;animation:slideUp .25s ease}
+.sheet::-webkit-scrollbar{display:none}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
+.sheet-title{font-size:17px;font-weight:600;margin-bottom:18px}
+
+/* FORM */
+.field{margin-bottom:13px}
+.field-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;display:block}
+.field-input{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);transition:.2s}
+.field-input:focus{border-color:var(--blue-500)}
+.field-input::placeholder{color:var(--text3)}
+select.field-input option{background:var(--surface)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* BUTTONS */
+.btn-primary{width:100%;background:var(--blue-600);color:white;font-size:14px;font-weight:600;padding:13px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:.15s}
+.btn-primary:active{background:var(--blue-700)}
+.btn-secondary{width:100%;background:var(--surface2);color:var(--text2);font-size:13px;font-weight:500;padding:11px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;margin-top:8px;transition:.15s}
+.btn-danger{width:100%;background:rgba(239,68,68,.1);color:var(--red);font-size:13px;font-weight:500;padding:11px;border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.2);cursor:pointer;margin-top:8px}
+
+/* DETAIL */
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-key{font-size:12px;color:var(--text2)}
+.detail-val{font-size:13px;font-weight:500;color:var(--text);text-align:right;max-width:60%}
+.co-badge{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.co-badge-text{font-size:12px;color:var(--yellow);line-height:1.4}
+.warn-badge{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+
+/* QR */
+.qr-box{background:white;border-radius:12px;padding:16px;display:inline-flex;flex-direction:column;align-items:center;gap:10px;margin:0 auto}
+.qr-label{font-size:11px;font-weight:600;color:#1565C0;text-align:center;max-width:140px;word-break:break-word}
+.qr-section{display:flex;flex-direction:column;align-items:center;gap:12px;margin:12px 0}
+.btn-qr-dl{background:var(--blue-600);color:white;font-size:12px;font-weight:600;padding:9px 20px;border-radius:8px;border:none;cursor:pointer}
+
+/* SCANNER */
+.scanner-wrap{background:#000;border-radius:12px;overflow:hidden;width:100%;aspect-ratio:1;max-width:300px;margin:0 auto;position:relative}
+#qr-reader{width:100%!important}
+#qr-reader video{width:100%!important;height:auto!important;object-fit:cover}
+#qr-reader img{display:none}
+.scanner-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scanner-frame{width:60%;aspect-ratio:1;border:2px solid var(--blue-500);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)}
+.scanner-line{position:absolute;left:20%;right:20%;height:2px;background:var(--blue-500);animation:scan 2s linear infinite;box-shadow:0 0 8px var(--blue-500)}
+@keyframes scan{0%{top:20%}100%{top:80%}}
+
+/* ACTIVITY */
+.act-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:8px;height:8px;border-radius:50%;background:var(--blue-500);margin-top:5px;flex-shrink:0}
+.act-text{font-size:12px;color:var(--text);line-height:1.5}
+.act-time{font-size:11px;color:var(--text3)}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px}
+.empty-icon{font-size:44px;margin-bottom:10px}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2)}
+.empty-sub{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* SWIPE DELETE */
+.asset-wrap{position:relative;margin-bottom:9px;border-radius:var(--radius);overflow:hidden}
+.asset-wrap .asset-item{margin-bottom:0;border-radius:var(--radius);transition:transform .2s ease;position:relative;z-index:1;background:var(--surface)}
+.swipe-bg{position:absolute;right:0;top:0;bottom:0;width:80px;background:var(--red);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;border-radius:0 var(--radius) var(--radius) 0;z-index:0}
+.swipe-bg span{font-size:18px}
+.swipe-bg small{font-size:10px;color:white;font-weight:500}
+.asset-wrap.swiped .asset-item{transform:translateX(-80px)}
+.asset-wrap.deleting{animation:fadeOut .3s ease forwards}
+@keyframes fadeOut{to{opacity:0;transform:scaleY(0);max-height:0;margin:0;padding:0}}
+
+/* REPORT SCREEN */
+.report-option{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;cursor:pointer;display:flex;gap:14px;align-items:center;transition:.15s}
+.report-option:active{background:var(--surface2)}
+.report-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.report-info b{font-size:14px;font-weight:600;color:var(--text);display:block;margin-bottom:3px}
+.report-info span{font-size:12px;color:var(--text2)}
+
+/* INSTALL BANNER */
+.install-banner{background:linear-gradient(135deg,var(--blue-800),var(--blue-700));border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:none;gap:10px;align-items:center}
+.install-banner b{font-size:13px;color:white;display:block}
+.install-banner span{font-size:11px;color:var(--blue-200)}
+.install-btn{background:white;color:var(--blue-700);font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;border:none;cursor:pointer;white-space:nowrap;margin-left:auto;flex-shrink:0}
+
+/* TOAST */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--green);color:white;font-size:13px;font-weight:500;padding:10px 20px;border-radius:30px;z-index:100;transition:.3s;white-space:nowrap;box-shadow:var(--shadow)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red)}
+.toast.info{background:var(--blue-600)}
+
+/* SECTION HEADER */
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sec-header h3{font-size:14px;font-weight:600}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue-500)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    <span class="topbar-title">SSB Asset Manager</span>
+    <span class="topbar-ver" id="lang-badge">ID</span>
+  </div>
+  <div class="topbar-right">
+    <button class="lang-btn" onclick="toggleLang()" id="lang-toggle">EN</button>
+  </div>
+</div>
+
+<!-- SCREEN: DASHBOARD -->
+<div id="screen-dashboard" class="screen active">
+  <div class="p16">
+    <div class="install-banner" id="install-banner">
+      <div><b data-id="install-title">Install sebagai App</b><span data-id="install-sub">Tambah ke layar utama</span></div>
+      <button class="install-btn" onclick="triggerInstall()">Install</button>
+    </div>
+    <div class="section-label" data-id="label-overview">Ringkasan Aset</div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="sec-header"><h3 data-id="label-recent">Aktivitas Terbaru</h3></div>
+    <div class="card" id="recent-activity"></div>
+  </div>
+</div>
+
+<!-- SCREEN: ASSETS -->
+<div id="screen-assets" class="screen">
+  <div class="p16">
+    <div class="search-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="search-input" placeholder="Cari aset, SN, user..." oninput="renderAssets()">
+      <button class="filter-toggle" id="filter-toggle-btn" onclick="toggleFilterPanel()" title="Filter">⚙️</button>
+    </div>
+    <div class="filter-panel" id="filter-panel">
+      <div class="filter-row">
+        <select class="filter-select" id="fil-cat">
+          <option value="">Semua Kategori</option>
+        </select>
+        <select class="filter-select" id="fil-status">
+          <option value="">Semua Status</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <select class="filter-select" id="fil-loc">
+          <option value="">Semua Lokasi</option>
+        </select>
+        <select class="filter-select" id="fil-cond">
+          <option value="">Semua Kondisi</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter-apply" onclick="applyFilter()" data-id="btn-apply-filter">Terapkan</button>
+        <button class="btn-filter-reset" onclick="resetFilter()" data-id="btn-reset-filter">Reset</button>
+      </div>
+    </div>
+    <div class="filter-bar" id="cat-chips"></div>
+    <div id="asset-list"></div>
+  </div>
+</div>
+
+<!-- SCREEN: SCAN -->
+<div id="screen-scan" class="screen">
+  <div class="p16">
+    <div class="section-label" data-id="label-scan">Scan QR Code Aset</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div class="scanner-wrap">
+        <div id="qr-reader"></div>
+        <div class="scanner-overlay"><div class="scanner-frame"><div class="scanner-line"></div></div></div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:12px" data-id="scan-hint">Arahkan kamera ke QR code pada label aset</p>
+    </div>
+    <div id="scan-result"></div>
+    <button class="btn-secondary" id="btn-stop-scan" style="display:none" onclick="stopScanner()" data-id="btn-stop">⏹ Hentikan Kamera</button>
+    <button class="btn-primary" id="btn-start-scan" onclick="startScanner()" data-id="btn-start-scan">📷 Aktifkan Kamera</button>
+  </div>
+</div>
+
+<!-- SCREEN: REPORT -->
+<div id="screen-report" class="screen">
+  <div class="p16">
+    <div class="section-label" data-id="label-report">Laporan Aset</div>
+    <div class="report-option" onclick="generatePDF('all')">
+      <div class="report-icon" style="background:rgba(33,150,243,.15)">📋</div>
+      <div class="report-info"><b data-id="rep-all">Semua Aset</b><span data-id="rep-all-sub">Export seluruh data aset ke PDF</span></div>
+    </div>
+    <div class="report-option" onclick="generatePDF('active')">
+      <div class="report-icon" style="background:rgba(16,185,129,.15)">✅</div>
+      <div class="report-info"><b data-id="rep-active">Aset Aktif</b><span data-id="rep-active-sub">Hanya aset dengan status aktif</span></div>
+    </div>
+    <div class="report-option" onclick="generatePDF('broken')">
+      <div class="report-icon" style="background:rgba(239,68,68,.15)">🔧</div>
+      <div class="report-info"><b data-id="rep-broken">Aset Rusak</b><span data-id="rep-broken-sub">Daftar aset yang perlu perbaikan</span></div>
+    </div>
+    <div class="report-option" onclick="generatePDF('borrowed')">
+      <div class="report-icon" style="background:rgba(245,158,11,.15)">📤</div>
+      <div class="report-info"><b data-id="rep-borrowed">Aset Dipinjam</b><span data-id="rep-borrowed-sub">Laporan peminjaman aktif</span></div>
+    </div>
+    <div class="report-option" onclick="generatePDF('warranty')">
+      <div class="report-icon" style="background:rgba(139,92,246,.15)">⚠️</div>
+      <div class="report-info"><b data-id="rep-warranty">Garansi Berakhir</b><span data-id="rep-warranty-sub">Aset dengan garansi sudah/akan habis</span></div>
+    </div>
+    <div class="mt12">
+      <div class="section-label" data-id="label-filter-report">Filter Lokasi untuk Laporan</div>
+      <select class="field-input" id="report-loc-filter" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);margin-bottom:10px">
+        <option value="">Semua Lokasi</option>
+      </select>
+      <button class="btn-primary" onclick="generatePDF('loc')" data-id="btn-report-loc">📍 Laporan per Lokasi</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: SETTINGS -->
+<div id="screen-settings" class="screen">
+  <div class="p16">
+    <div class="section-label" data-id="label-settings">Pengaturan</div>
+    <div class="card">
+      <div class="detail-row"><span class="detail-key" data-id="set-lang">Bahasa</span><span class="detail-val" id="cur-lang-label">Bahasa Indonesia</span></div>
+      <div class="detail-row"><span class="detail-key" data-id="set-total">Total Aset</span><span class="detail-val" id="set-total-val">0</span></div>
+      <div class="detail-row"><span class="detail-key">Version</span><span class="detail-val" style="font-family:'JetBrains Mono',monospace;font-size:11px">v2.1 · PT SSB</span></div>
+    </div>
+
+    <div class="section-label mt12" data-id="label-backup">Backup & Restore</div>
+    <div class="card">
+      <button class="btn-secondary" style="margin:0 0 8px" onclick="exportData()" data-id="btn-export">📤 Export Data (JSON)</button>
+      <button class="btn-secondary" style="margin:0" onclick="document.getElementById('import-file').click()" data-id="btn-import">📥 Import Data (JSON)</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+
+    <div class="section-label mt12" data-id="label-delete-section">Hapus Data</div>
+    <div class="card">
+      <div class="section-label" style="margin-bottom:8px;font-size:10px" data-id="label-del-filter">Hapus Aset Berdasarkan Filter</div>
+      <div class="field-row" style="margin-bottom:8px">
+        <select class="filter-select" id="del-status-sel" style="font-size:12px;padding:8px">
+          <option value="">-- Status --</option>
+        </select>
+        <select class="filter-select" id="del-loc-sel" style="font-size:12px;padding:8px">
+          <option value="">-- Lokasi --</option>
+        </select>
+      </div>
+      <div id="del-preview" style="font-size:12px;color:var(--text3);margin-bottom:8px;min-height:18px"></div>
+      <button class="btn-danger" style="margin:0 0 10px" onclick="deleteByFilter()" data-id="btn-del-filter">🗑️ Hapus Aset Terfilter</button>
+      <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+      <button class="btn-secondary" style="margin:0 0 8px;color:var(--yellow)" onclick="confirmClearHistory()" data-id="btn-clear-history">🧹 Hapus Riwayat Aktivitas</button>
+      <button class="btn-danger" style="margin:0" onclick="confirmClear()" data-id="btn-clear">⚠️ Hapus SEMUA Data</button>
+    </div>
+
+    <div class="mt12 card" style="background:var(--surface2)">
+      <div style="font-size:12px;color:var(--text3);line-height:1.7" data-id="install-guide">
+        <b style="color:var(--text2);display:block;margin-bottom:6px">📲 Install ke Android</b>
+        1. Buka di Chrome → 2. Tap ⋮ → 3. "Tambahkan ke layar utama"<br>
+        <span style="color:var(--blue-200)">Data tersimpan offline di HP.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showScreen('dashboard',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span data-id="nav-home">Dashboard</span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('assets',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+    <span data-id="nav-assets">Aset</span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('scan',this)" style="padding-top:2px">
+    <div class="nav-scan-center">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+    </div>
+    <span data-id="nav-scan" style="margin-top:4px">Scan</span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('report',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <span data-id="nav-report">Laporan</span>
+  </button>
+  <button class="nav-btn" onclick="showScreen('settings',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span data-id="nav-settings">Pengaturan</span>
+  </button>
+</nav>
+
+<!-- FAB ADD -->
+<button class="fab" id="fab-add" onclick="openAddSheet()">+</button>
+</div>
+
+<!-- OVERLAY: ADD/EDIT -->
+<div class="overlay" id="overlay-add" onclick="closeIfBg(event,'overlay-add')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-add-title">Tambah Aset Baru</div>
+    <div class="field">
+      <label class="field-label" data-id="f-name">Nama Aset *</label>
+      <input class="field-input" id="f-name-inp" placeholder="Contoh: Laptop Dell Latitude 5420">
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="field-label" data-id="f-cat">Kategori *</label><select class="field-input" id="f-cat-inp"></select></div>
+      <div class="field"><label class="field-label" data-id="f-status">Status</label><select class="field-input" id="f-status-inp"></select></div>
+    </div>
+    <div class="field">
+      <label class="field-label" data-id="f-sn">Serial Number / Kode Aset</label>
+      <input class="field-input" id="f-sn-inp" placeholder="SN/TAG" style="font-family:'JetBrains Mono',monospace">
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="field-label" data-id="f-loc">Lokasi</label><select class="field-input" id="f-loc-inp"></select></div>
+      <div class="field"><label class="field-label" data-id="f-cond">Kondisi</label><select class="field-input" id="f-cond-inp"></select></div>
+    </div>
+    <div class="field">
+      <label class="field-label" data-id="f-user">Pengguna / PIC</label>
+      <input class="field-input" id="f-user-inp" placeholder="Nama karyawan / departemen">
+    </div>
+    <div class="field-row">
+      <div class="field"><label class="field-label" data-id="f-brand">Merk / Model</label><input class="field-input" id="f-brand-inp" placeholder="Dell, Cisco..."></div>
+      <div class="field"><label class="field-label" data-id="f-year">Tahun Beli</label><input class="field-input" id="f-year-inp" type="number" placeholder="2023"></div>
+    </div>
+    <div class="field">
+      <label class="field-label" data-id="f-warranty">Garansi Berakhir</label>
+      <input class="field-input" id="f-warranty-inp" type="date">
+    </div>
+    <div class="field">
+      <label class="field-label" data-id="f-note">Catatan</label>
+      <textarea class="field-input" id="f-note-inp" rows="2" style="resize:none" placeholder="Spesifikasi, kondisi khusus..."></textarea>
+    </div>
+    <button class="btn-primary" onclick="saveAsset()" id="btn-save-asset" data-id="btn-save">Simpan Aset</button>
+    <button class="btn-secondary" onclick="closeSheet('overlay-add')" data-id="btn-cancel">Batal</button>
+    <button class="btn-danger" id="btn-delete-asset" style="display:none" onclick="deleteAsset()" data-id="btn-delete">Hapus Aset Ini</button>
+  </div>
+</div>
+
+<!-- OVERLAY: DETAIL -->
+<div class="overlay" id="overlay-detail" onclick="closeIfBg(event,'overlay-detail')">
+  <div class="sheet" id="detail-sheet"></div>
+</div>
+
+<!-- OVERLAY: QR VIEW -->
+<div class="overlay" id="overlay-qr" onclick="closeIfBg(event,'overlay-qr')">
+  <div class="sheet" id="qr-sheet"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────
+const SK='ssb_assets_v3', HK='ssb_history_v3';
+let lang=localStorage.getItem('ssb_lang')||'id';
+let assets=JSON.parse(localStorage.getItem(SK)||'[]');
+let history=JSON.parse(localStorage.getItem(HK)||'[]');
+let editingId=null, activeCategory='all', filterActive={cat:'',status:'',loc:'',cond:''};
+let qrScanner=null, deferredPrompt=null;
+
+// ─── TRANSLATIONS ────────────────────────────────────────────────
+const T={
+  id:{
+    'label-overview':'Ringkasan Aset','label-recent':'Aktivitas Terbaru','label-scan':'Scan QR Code Aset',
+    'label-report':'Laporan Aset','label-settings':'Pengaturan','label-filter-report':'Filter Laporan per Lokasi',
+    'install-title':'Install sebagai App','install-sub':'Tambah ke layar utama',
+    'install-guide':'<b style="color:var(--text2);display:block;margin-bottom:6px">📲 Install ke Android</b>1. Buka di Chrome → 2. Tap ⋮ → 3. "Tambahkan ke layar utama"<br><span style="color:var(--blue-200)">Data tersimpan offline di HP.</span>',
+    'nav-home':'Dashboard','nav-assets':'Aset','nav-scan':'Scan','nav-report':'Laporan','nav-settings':'Pengaturan',
+    'sheet-add':'Tambah Aset Baru','sheet-edit':'Edit Aset',
+    'f-name':'Nama Aset *','f-cat':'Kategori *','f-status':'Status','f-sn':'Serial Number / Kode Aset',
+    'f-loc':'Lokasi','f-cond':'Kondisi','f-user':'Pengguna / PIC','f-brand':'Merk / Model',
+    'f-year':'Tahun Beli','f-warranty':'Garansi Berakhir','f-note':'Catatan',
+    'btn-save':'Simpan Aset','btn-cancel':'Batal','btn-delete':'Hapus Aset Ini',
+    'btn-export':'📤 Export Data (JSON)','btn-import':'📥 Import Data (JSON)','btn-clear':'🗑️ Hapus Semua Data',
+    'btn-apply-filter':'Terapkan Filter','btn-reset-filter':'Reset',
+    'btn-report-loc':'📍 Laporan per Lokasi',
+    'btn-start-scan':'📷 Aktifkan Kamera','btn-stop':'⏹ Hentikan Kamera',
+    'scan-hint':'Arahkan kamera ke QR code pada label aset',
+    'set-lang':'Bahasa / Language','set-total':'Total Aset','lang-label':'Bahasa Indonesia',
+    'rep-all':'Semua Aset','rep-all-sub':'Export seluruh data aset ke PDF',
+    'rep-active':'Aset Aktif','rep-active-sub':'Hanya aset dengan status aktif',
+    'rep-broken':'Aset Rusak','rep-broken-sub':'Daftar aset yang perlu perbaikan',
+    'rep-borrowed':'Aset Dipinjam','rep-borrowed-sub':'Laporan peminjaman aktif',
+    'rep-warranty':'Garansi Berakhir','rep-warranty-sub':'Aset dengan garansi sudah/akan habis',
+    'stat-total':'Total Aset','stat-active':'Aktif','stat-broken':'Rusak','stat-borrowed':'Dipinjam',
+    'cat-all':'Semua','cat-hardware':'Hardware','cat-network':'Jaringan','cat-comms':'Komunikasi','cat-peripheral':'Peripheral',
+    'status-active':'Aktif','status-broken':'Rusak','status-borrowed':'Dipinjam','status-storage':'Gudang',
+    'loc-office':'Kantor','loc-site':'Site Tambang','loc-mess':'Mess','loc-workshop':'Workshop','loc-other':'Lainnya',
+    'cond-good':'Baik','cond-fair':'Cukup','cond-poor':'Kurang',
+    'empty-assets':'Belum ada aset','empty-sub':'Tap + untuk tambah aset baru',
+    'empty-checkout':'Tidak ada aset dipinjam','empty-activity':'Belum ada aktivitas',
+    'detail-info':'Informasi Aset','btn-edit':'Edit','btn-checkout':'Tandai Dipinjam','btn-return':'Kembalikan',
+    'checkout-label':'Dipinjam oleh','checkout-ph':'Nama peminjam...','btn-confirm-co':'Konfirmasi Pinjam',
+    'btn-view-qr':'🔳 Lihat QR Code','btn-dl-qr':'⬇️ Download QR Label',
+    'qr-title':'QR Code Aset','qr-hint':'Print atau screenshot untuk tempel di aset',
+    'toast-saved':'Aset berhasil disimpan','toast-deleted':'Aset dihapus',
+    'toast-co':'Aset ditandai dipinjam','toast-returned':'Aset dikembalikan',
+    'toast-exported':'Data berhasil diekspor','toast-imported':'Data berhasil diimpor',
+    'toast-cleared':'Semua data dihapus','toast-pdf':'Laporan PDF berhasil dibuat',
+    'confirm-delete':'Hapus aset ini? Tidak bisa dibatalkan.','confirm-clear':'Hapus SEMUA data? Ini permanen.',
+    'warranty-exp':'Garansi sudah berakhir','scan-found':'Aset ditemukan!','scan-not-found':'QR tidak dikenali',
+    'pdf-title':'Laporan Aset IT','pdf-company':'PT Sultra Sarana Bumi (PT SSB)',
+    'pdf-generated':'Dibuat oleh: SSB Asset Manager v2',
+    'pdf-col-no':'No','pdf-col-name':'Nama Aset','pdf-col-cat':'Kategori',
+    'pdf-col-sn':'Serial/Tag','pdf-col-status':'Status','pdf-col-loc':'Lokasi',
+    'pdf-col-user':'Pengguna','pdf-col-warranty':'Garansi','pdf-col-cond':'Kondisi',
+    'pdf-borrower':'Dipinjam Oleh','pdf-borrow-date':'Tgl Pinjam',
+  },
+  en:{
+    'label-overview':'Asset Overview','label-recent':'Recent Activity','label-scan':'Scan Asset QR Code',
+    'label-report':'Asset Reports','label-settings':'Settings','label-filter-report':'Filter Report by Location',
+    'install-title':'Install as App','install-sub':'Add to home screen',
+    'install-guide':'<b style="color:var(--text2);display:block;margin-bottom:6px">📲 Install on Android</b>1. Open in Chrome → 2. Tap ⋮ → 3. "Add to Home Screen"<br><span style="color:var(--blue-200)">Data stored offline on device.</span>',
+    'nav-home':'Dashboard','nav-assets':'Assets','nav-scan':'Scan','nav-report':'Report','nav-settings':'Settings',
+    'sheet-add':'Add New Asset','sheet-edit':'Edit Asset',
+    'f-name':'Asset Name *','f-cat':'Category *','f-status':'Status','f-sn':'Serial Number / Asset Tag',
+    'f-loc':'Location','f-cond':'Condition','f-user':'User / PIC','f-brand':'Brand / Model',
+    'f-year':'Purchase Year','f-warranty':'Warranty Expires','f-note':'Notes',
+    'btn-save':'Save Asset','btn-cancel':'Cancel','btn-delete':'Delete This Asset',
+    'btn-export':'📤 Export Data (JSON)','btn-import':'📥 Import Data (JSON)','btn-clear':'🗑️ Clear All Data',
+    'btn-apply-filter':'Apply Filter','btn-reset-filter':'Reset',
+    'btn-report-loc':'📍 Report by Location',
+    'btn-start-scan':'📷 Activate Camera','btn-stop':'⏹ Stop Camera',
+    'scan-hint':'Point camera at asset QR code label',
+    'set-lang':'Language / Bahasa','set-total':'Total Assets','lang-label':'English',
+    'rep-all':'All Assets','rep-all-sub':'Export all asset data to PDF',
+    'rep-active':'Active Assets','rep-active-sub':'Only assets with active status',
+    'rep-broken':'Broken Assets','rep-broken-sub':'Assets needing repair',
+    'rep-borrowed':'Borrowed Assets','rep-borrowed-sub':'Active loan report',
+    'rep-warranty':'Expired Warranty','rep-warranty-sub':'Assets with expired/expiring warranty',
+    'stat-total':'Total Assets','stat-active':'Active','stat-broken':'Broken','stat-borrowed':'Borrowed',
+    'cat-all':'All','cat-hardware':'Hardware','cat-network':'Network','cat-comms':'Comms','cat-peripheral':'Peripheral',
+    'status-active':'Active','status-broken':'Broken','status-borrowed':'Borrowed','status-storage':'Storage',
+    'loc-office':'Office','loc-site':'Mine Site','loc-mess':'Mess Hall','loc-workshop':'Workshop','loc-other':'Other',
+    'cond-good':'Good','cond-fair':'Fair','cond-poor':'Poor',
+    'empty-assets':'No assets yet','empty-sub':'Tap + to add a new asset',
+    'empty-checkout':'No borrowed assets','empty-activity':'No activity yet',
+    'detail-info':'Asset Info','btn-edit':'Edit','btn-checkout':'Mark as Borrowed','btn-return':'Return Asset',
+    'checkout-label':'Borrowed by','checkout-ph':'Borrower name...','btn-confirm-co':'Confirm Loan',
+    'btn-view-qr':'🔳 View QR Code','btn-dl-qr':'⬇️ Download QR Label',
+    'qr-title':'Asset QR Code','qr-hint':'Print or screenshot to attach on asset',
+    'toast-saved':'Asset saved','toast-deleted':'Asset deleted',
+    'toast-co':'Asset marked as borrowed','toast-returned':'Asset returned',
+    'toast-exported':'Data exported','toast-imported':'Data imported',
+    'toast-cleared':'All data cleared','toast-pdf':'PDF report created',
+    'confirm-delete':'Delete this asset? Cannot be undone.','confirm-clear':'Delete ALL data? This is permanent.',
+    'warranty-exp':'Warranty expired','scan-found':'Asset found!','scan-not-found':'QR not recognized',
+    'pdf-title':'IT Asset Report','pdf-company':'PT Sultra Sarana Bumi (PT SSB)',
+    'pdf-generated':'Generated by: SSB Asset Manager v2',
+    'pdf-col-no':'No','pdf-col-name':'Asset Name','pdf-col-cat':'Category',
+    'pdf-col-sn':'Serial/Tag','pdf-col-status':'Status','pdf-col-loc':'Location',
+    'pdf-col-user':'User','pdf-col-warranty':'Warranty','pdf-col-cond':'Condition',
+    'pdf-borrower':'Borrowed By','pdf-borrow-date':'Borrow Date',
+  }
+};
+function t(k){ return T[lang]?.[k] || T.id[k] || k; }
+
+const CATS=[{k:'all',i:'📋'},{k:'hardware',i:'💻'},{k:'network',i:'🌐'},{k:'comms',i:'📻'},{k:'peripheral',i:'🖨️'}];
+const ICONS={hardware:'💻',network:'🌐',comms:'📻',peripheral:'🖨️'};
+const COLORS={hardware:'rgba(33,150,243,.15)',network:'rgba(16,185,129,.15)',comms:'rgba(139,92,246,.15)',peripheral:'rgba(245,158,11,.15)'};
+const STATUS_CLS={active:'badge-active',broken:'badge-broken',borrowed:'badge-borrowed',storage:'badge-storage'};
+
+function save(){ localStorage.setItem(SK,JSON.stringify(assets)); localStorage.setItem(HK,JSON.stringify(history)); }
+function uid(){ return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function addHistory(desc){ history.unshift({id:uid(),desc,time:Date.now()}); if(history.length>60) history=history.slice(0,60); }
+function fmtDate(ts){ if(!ts) return '—'; return new Date(ts).toLocaleDateString(lang==='id'?'id-ID':'en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+function timeAgo(ts){ const d=Date.now()-ts,m=60000,h=3600000,dy=86400000; if(d<m) return lang==='id'?'Baru saja':'Just now'; if(d<h) return Math.floor(d/m)+(lang==='id'?' mnt lalu':' min ago'); if(d<dy) return Math.floor(d/h)+(lang==='id'?' jam lalu':' hr ago'); return Math.floor(d/dy)+(lang==='id'?' hari lalu':' days ago'); }
+
+// ─── SEED DEMO ───────────────────────────────────────────────────
+function seedDemo(){
+  if(assets.length) return;
+  assets=[
+    {id:uid(),name:'Laptop Dell Latitude 5420',cat:'hardware',status:'active',sn:'DLL-001',loc:'office',cond:'good',user:'Firmansyah IT',brand:'Dell',year:'2022',warranty:'2025-06-01',note:'RAM 16GB SSD 512GB',created:Date.now()-864e5*10},
+    {id:uid(),name:'Switch Cisco SG250-26',cat:'network',status:'active',sn:'CSC-SW-01',loc:'office',cond:'good',user:'IT Dept',brand:'Cisco',year:'2021',warranty:'2024-12-01',note:'26-port managed',created:Date.now()-864e5*8},
+    {id:uid(),name:'HT Motorola DP1400',cat:'comms',status:'borrowed',sn:'HT-023',loc:'site',cond:'fair',user:'Andi Operator',brand:'Motorola',year:'2020',warranty:'',note:'Baterai sering lemah',created:Date.now()-864e5*5,borrower:'Andi Operator',borrowDate:Date.now()-864e5*2},
+    {id:uid(),name:'Printer HP LaserJet Pro M404n',cat:'peripheral',status:'broken',sn:'PRN-004',loc:'office',cond:'poor',user:'',brand:'HP',year:'2019',warranty:'',note:'Drum perlu diganti',created:Date.now()-864e5*20},
+    {id:uid(),name:'Access Point Ubiquiti UAP-AC-Pro',cat:'network',status:'active',sn:'UAP-007',loc:'mess',cond:'good',user:'IT Dept',brand:'Ubiquiti',year:'2023',warranty:'2026-03-01',note:'Mess Block C',created:Date.now()-864e5*3},
+    {id:uid(),name:'PC Desktop Lenovo ThinkCentre',cat:'hardware',status:'active',sn:'PC-012',loc:'office',cond:'good',user:'Admin GA',brand:'Lenovo',year:'2021',warranty:'2024-06-01',note:'Core i5, 8GB RAM',created:Date.now()-864e5*15},
+    {id:uid(),name:'HT Kenwood TK-3400',cat:'comms',status:'active',sn:'HT-031',loc:'site',cond:'good',user:'Security',brand:'Kenwood',year:'2022',warranty:'2025-12-01',note:'Untuk security post',created:Date.now()-864e5*4},
+    {id:uid(),name:'Router MikroTik RB450G',cat:'network',status:'active',sn:'MK-RT-02',loc:'workshop',cond:'good',user:'IT Dept',brand:'MikroTik',year:'2022',warranty:'2025-08-01',note:'Gateway workshop',created:Date.now()-864e5*6},
+  ];
+  addHistory(lang==='id'?'Data demo dimuat':'Demo data loaded');
+  save();
+}
+
+// ─── LANG ─────────────────────────────────────────────────────────
+function toggleLang(){ lang=lang==='id'?'en':'id'; localStorage.setItem('ssb_lang',lang); applyLang(); renderAll(); }
+function applyLang(){
+  document.getElementById('lang-badge').textContent=lang.toUpperCase();
+  document.getElementById('lang-toggle').textContent=lang==='id'?'EN':'ID';
+  document.getElementById('cur-lang-label').textContent=t('lang-label');
+  document.querySelectorAll('[data-id]').forEach(el=>{ const k=el.dataset.id; if(T[lang]?.[k]) el.innerHTML=T[lang][k]; });
+  const si=document.getElementById('search-input'); if(si) si.placeholder=lang==='id'?'Cari aset, SN, user...':'Search assets, SN, user...';
+  rebuildFilterSelects(); rebuildLocOptions();
+}
+
+// ─── SCREENS ──────────────────────────────────────────────────────
+function showScreen(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('fab-add').style.display=(name==='assets'||name==='dashboard')?'flex':'none';
+  if(name==='dashboard') renderDashboard();
+  if(name==='assets') renderAssets();
+  if(name==='settings'){ document.getElementById('set-total-val').textContent=assets.length; initDeleteSelects(); }
+  if(name==='scan') initScanScreen();
+  if(name!=='scan' && qrScanner) stopScanner();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────
+function renderAll(){ renderDashboard(); renderAssets(); }
+
+function renderDashboard(){
+  const total=assets.length,active=assets.filter(a=>a.status==='active').length,
+        broken=assets.filter(a=>a.status==='broken').length,borrowed=assets.filter(a=>a.status==='borrowed').length;
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="stat-card s-blue" onclick="showScreen('assets',document.querySelectorAll('.nav-btn')[1])">
+      <div class="stat-val">${total}</div><div class="stat-label">${t('stat-total')}</div></div>
+    <div class="stat-card s-green" onclick="filterByStatus('active')">
+      <div class="stat-val">${active}</div><div class="stat-label">${t('stat-active')}</div></div>
+    <div class="stat-card s-red" onclick="filterByStatus('broken')">
+      <div class="stat-val">${broken}</div><div class="stat-label">${t('stat-broken')}</div></div>
+    <div class="stat-card s-yellow" onclick="filterByStatus('borrowed')">
+      <div class="stat-val">${borrowed}</div><div class="stat-label">${t('stat-borrowed')}</div></div>`;
+  const ra=document.getElementById('recent-activity');
+  if(!history.length){ ra.innerHTML=`<div style="padding:12px 0;text-align:center;color:var(--text3);font-size:13px">${t('empty-activity')}</div>`; return; }
+  ra.innerHTML=history.slice(0,6).map(h=>`<div class="act-item"><div class="act-dot"></div><div><div class="act-text">${h.desc}</div><div class="act-time">${timeAgo(h.time)}</div></div></div>`).join('');
+}
+
+function filterByStatus(st){
+  filterActive.status=st; activeCategory='all';
+  showScreen('assets', document.querySelectorAll('.nav-btn')[1]);
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+}
+
+function renderAssets(){
+  const q=(document.getElementById('search-input')?.value||'').toLowerCase();
+  let list=assets.filter(a=>{
+    const mCat=activeCategory==='all'||a.cat===activeCategory;
+    const mQ=!q||a.name.toLowerCase().includes(q)||a.sn.toLowerCase().includes(q)||a.user.toLowerCase().includes(q)||a.brand.toLowerCase().includes(q);
+    const mSt=!filterActive.status||a.status===filterActive.status;
+    const mLoc=!filterActive.loc||a.loc===filterActive.loc;
+    const mCond=!filterActive.cond||a.cond===filterActive.cond;
+    return mCat&&mQ&&mSt&&mLoc&&mCond;
+  });
+
+  // chips
+  document.getElementById('cat-chips').innerHTML=CATS.map(c=>`<button class="chip${activeCategory===c.k?' active':''}" onclick="setCategory('${c.k}')">${c.i} ${t('cat-'+c.k)}</button>`).join('');
+  // filter toggle badge
+  const hasFilter=Object.values(filterActive).some(v=>v);
+  document.getElementById('filter-toggle-btn').className='filter-toggle'+(hasFilter?' has-filter':'');
+
+  const el=document.getElementById('asset-list');
+  if(!list.length){ el.innerHTML=`<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">${t('empty-assets')}</div><div class="empty-sub">${t('empty-sub')}</div></div>`; return; }
+  el.innerHTML=list.map(a=>`
+    <div class="asset-wrap" id="wrap-${a.id}">
+      <div class="swipe-bg" onclick="quickDelete('${a.id}')"><span>🗑️</span><small>${lang==='id'?'Hapus':'Delete'}</small></div>
+      <div class="asset-item" id="item-${a.id}" onclick="openDetail('${a.id}')">
+        <div class="asset-icon" style="background:${COLORS[a.cat]||'var(--surface2)'}">${ICONS[a.cat]||'📦'}</div>
+        <div class="asset-info">
+          <div class="asset-name">${a.name}</div>
+          <div class="asset-sub">${a.brand||'—'} · ${t('loc-'+a.loc)}</div>
+          <div class="asset-meta">
+            <span class="badge ${STATUS_CLS[a.status]}"><span class="dot"></span>${t('status-'+a.status)}</span>
+            ${a.sn?`<span class="asset-sn">${a.sn}</span>`:''}
+            ${a.user?`<span style="font-size:11px;color:var(--text3)">👤 ${a.user}</span>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+  // attach swipe listeners
+  list.forEach(a=>attachSwipe(a.id));
+}
+
+function setCategory(k){ activeCategory=k; renderAssets(); }
+
+// ─── FILTER PANEL ────────────────────────────────────────────────
+function toggleFilterPanel(){ document.getElementById('filter-panel').classList.toggle('open'); }
+function rebuildFilterSelects(){
+  const cats=[{v:'',l:lang==='id'?'Semua Kategori':'All Categories'},...CATS.slice(1).map(c=>({v:c.k,l:t('cat-'+c.k)}))];
+  const sts=[{v:'',l:lang==='id'?'Semua Status':'All Status'},{v:'active',l:t('status-active')},{v:'broken',l:t('status-broken')},{v:'borrowed',l:t('status-borrowed')},{v:'storage',l:t('status-storage')}];
+  const locs=[{v:'',l:lang==='id'?'Semua Lokasi':'All Locations'},{v:'office',l:t('loc-office')},{v:'site',l:t('loc-site')},{v:'mess',l:t('loc-mess')},{v:'workshop',l:t('loc-workshop')},{v:'other',l:t('loc-other')}];
+  const conds=[{v:'',l:lang==='id'?'Semua Kondisi':'All Conditions'},{v:'good',l:t('cond-good')},{v:'fair',l:t('cond-fair')},{v:'poor',l:t('cond-poor')}];
+  const fill=(id,opts)=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join(''); };
+  fill('fil-cat',cats); fill('fil-status',sts); fill('fil-loc',locs); fill('fil-cond',conds);
+}
+function rebuildLocOptions(){
+  const locs=[{v:'',l:lang==='id'?'Semua Lokasi':'All Locations'},{v:'office',l:t('loc-office')},{v:'site',l:t('loc-site')},{v:'mess',l:t('loc-mess')},{v:'workshop',l:t('loc-workshop')},{v:'other',l:t('loc-other')}];
+  ['report-loc-filter'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=locs.map(o=>`<option value="${o.v}">${o.l}</option>`).join(''); });
+}
+function applyFilter(){
+  filterActive={cat:document.getElementById('fil-cat').value,status:document.getElementById('fil-status').value,loc:document.getElementById('fil-loc').value,cond:document.getElementById('fil-cond').value};
+  if(filterActive.cat) activeCategory=filterActive.cat; else activeCategory='all';
+  document.getElementById('filter-panel').classList.remove('open');
+  renderAssets();
+}
+function resetFilter(){ filterActive={cat:'',status:'',loc:'',cond:''}; activeCategory='all'; ['fil-cat','fil-status','fil-loc','fil-cond'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); renderAssets(); }
+
+// ─── ADD / EDIT SHEET ────────────────────────────────────────────
+function buildSelects(){
+  const si=(id,opts)=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join(''); };
+  si('f-cat-inp',[['hardware',t('cat-hardware')],['network',t('cat-network')],['comms',t('cat-comms')],['peripheral',t('cat-peripheral')]]);
+  si('f-status-inp',[['active',t('status-active')],['broken',t('status-broken')],['borrowed',t('status-borrowed')],['storage',t('status-storage')]]);
+  si('f-loc-inp',[['office',t('loc-office')],['site',t('loc-site')],['mess',t('loc-mess')],['workshop',t('loc-workshop')],['other',t('loc-other')]]);
+  si('f-cond-inp',[['good',t('cond-good')],['fair',t('cond-fair')],['poor',t('cond-poor')]]);
+}
+function openAddSheet(){
+  editingId=null; buildSelects();
+  document.getElementById('sheet-add-title').textContent=t('sheet-add');
+  document.getElementById('btn-save-asset').textContent=t('btn-save');
+  document.getElementById('btn-delete-asset').style.display='none';
+  ['name','sn','user','brand','year','warranty','note'].forEach(f=>{ const el=document.getElementById('f-'+f+'-inp'); if(el) el.value=''; });
+  document.getElementById('f-cat-inp').value='hardware';
+  document.getElementById('f-status-inp').value='active';
+  document.getElementById('f-loc-inp').value='office';
+  document.getElementById('f-cond-inp').value='good';
+  document.getElementById('overlay-add').classList.add('open');
+}
+function openEditSheet(id){
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  editingId=id; buildSelects();
+  document.getElementById('sheet-add-title').textContent=t('sheet-edit');
+  document.getElementById('btn-save-asset').textContent=t('btn-save');
+  document.getElementById('btn-delete-asset').style.display='block';
+  document.getElementById('f-name-inp').value=a.name||'';
+  document.getElementById('f-sn-inp').value=a.sn||'';
+  document.getElementById('f-user-inp').value=a.user||'';
+  document.getElementById('f-brand-inp').value=a.brand||'';
+  document.getElementById('f-year-inp').value=a.year||'';
+  document.getElementById('f-warranty-inp').value=a.warranty||'';
+  document.getElementById('f-note-inp').value=a.note||'';
+  document.getElementById('f-cat-inp').value=a.cat||'hardware';
+  document.getElementById('f-status-inp').value=a.status||'active';
+  document.getElementById('f-loc-inp').value=a.loc||'office';
+  document.getElementById('f-cond-inp').value=a.cond||'good';
+  closeSheet('overlay-detail');
+  setTimeout(()=>document.getElementById('overlay-add').classList.add('open'),150);
+}
+function saveAsset(){
+  const name=document.getElementById('f-name-inp').value.trim();
+  if(!name){ showToast(lang==='id'?'Nama aset wajib diisi':'Asset name required',true); return; }
+  const a={
+    id:editingId||uid(), name,
+    cat:document.getElementById('f-cat-inp').value,
+    status:document.getElementById('f-status-inp').value,
+    sn:document.getElementById('f-sn-inp').value.trim(),
+    loc:document.getElementById('f-loc-inp').value,
+    cond:document.getElementById('f-cond-inp').value,
+    user:document.getElementById('f-user-inp').value.trim(),
+    brand:document.getElementById('f-brand-inp').value.trim(),
+    year:document.getElementById('f-year-inp').value,
+    warranty:document.getElementById('f-warranty-inp').value,
+    note:document.getElementById('f-note-inp').value.trim(),
+    created:editingId?assets.find(x=>x.id===editingId)?.created||Date.now():Date.now(),
+    updated:Date.now(),
+  };
+  if(editingId){ const i=assets.findIndex(x=>x.id===editingId); if(i>-1){ const old=assets[i]; a.borrower=old.borrower; a.borrowDate=old.borrowDate; assets[i]=a; } }
+  else assets.unshift(a);
+  addHistory(lang==='id'?`Aset "${name}" ${editingId?'diperbarui':'ditambahkan'}`:`Asset "${name}" ${editingId?'updated':'added'}`);
+  save(); closeSheet('overlay-add'); renderAll(); showToast(t('toast-saved'));
+}
+function deleteAsset(){
+  if(!editingId||!confirm(t('confirm-delete'))) return;
+  const id=editingId;
+  closeSheet('overlay-add');
+  doDelete(id);
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────
+function openDetail(id){
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  const isBorrowed=a.status==='borrowed';
+  const wExp=a.warranty&&new Date(a.warranty)<new Date();
+  document.getElementById('detail-sheet').innerHTML=`
+    <div class="sheet-handle"></div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+      <div class="asset-icon" style="width:50px;height:50px;font-size:24px;background:${COLORS[a.cat]||'var(--surface2)'}">
+        ${ICONS[a.cat]||'📦'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:600;line-height:1.3">${a.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">${t('cat-'+a.cat)} · ${a.brand||'—'}</div>
+        <div style="margin-top:6px"><span class="badge ${STATUS_CLS[a.status]}"><span class="dot"></span>${t('status-'+a.status)}</span></div>
+      </div>
+    </div>
+    ${isBorrowed?`<div class="co-badge"><div style="font-size:20px">📤</div><div class="co-badge-text"><b style="display:block">${t('checkout-label')}: ${a.borrower||'—'}</b>${a.borrowDate?timeAgo(a.borrowDate):''}</div></div>`:''}
+    ${wExp?`<div class="warn-badge"><div style="font-size:20px">⚠️</div><div style="font-size:12px;color:var(--red)">${t('warranty-exp')}: ${a.warranty}</div></div>`:''}
+    <div class="section-label">${t('detail-info')}</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="detail-row"><span class="detail-key">Serial / Tag</span><span class="detail-val" style="font-family:'JetBrains Mono',monospace;font-size:12px">${a.sn||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">${lang==='id'?'Lokasi':'Location'}</span><span class="detail-val">${t('loc-'+a.loc)}</span></div>
+      <div class="detail-row"><span class="detail-key">${lang==='id'?'Pengguna':'User'}</span><span class="detail-val">${a.user||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">${lang==='id'?'Kondisi':'Condition'}</span><span class="detail-val">${t('cond-'+a.cond)}</span></div>
+      <div class="detail-row"><span class="detail-key">${lang==='id'?'Tahun Beli':'Year'}</span><span class="detail-val">${a.year||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">${lang==='id'?'Garansi':'Warranty'}</span><span class="detail-val" style="${wExp?'color:var(--red)':''}">${a.warranty||'—'}</span></div>
+      ${a.note?`<div class="detail-row"><span class="detail-key">${lang==='id'?'Catatan':'Notes'}</span><span class="detail-val" style="font-size:12px">${a.note}</span></div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn-secondary" style="margin:0" onclick="openEditSheet('${id}')">✏️ ${t('btn-edit')}</button>
+      <button class="btn-secondary" style="margin:0;${isBorrowed?'color:var(--green)':''}" onclick="${isBorrowed?`returnAsset('${id}')`:`openCheckoutSheet('${id}')`}">
+        ${isBorrowed?'↩️ '+t('btn-return'):'📤 '+t('btn-checkout')}</button>
+    </div>
+    <button class="btn-secondary" style="color:var(--blue-400)" onclick="openQRSheet('${id}')">${t('btn-view-qr')}</button>`;
+  document.getElementById('overlay-detail').classList.add('open');
+}
+
+// ─── CHECKOUT ────────────────────────────────────────────────────
+function openCheckoutSheet(id){
+  closeSheet('overlay-detail');
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  document.getElementById('detail-sheet').innerHTML=`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📤 ${t('btn-checkout')}</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:2px">${a.name}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${a.sn||''}</div>
+    <div class="field">
+      <label class="field-label">${t('checkout-label')}</label>
+      <input class="field-input" id="co-name" placeholder="${t('checkout-ph')}">
+    </div>
+    <button class="btn-primary" onclick="confirmCheckout('${id}')">${t('btn-confirm-co')}</button>
+    <button class="btn-secondary" onclick="closeSheet('overlay-detail')">${t('btn-cancel')}</button>`;
+  setTimeout(()=>{ document.getElementById('overlay-detail').classList.add('open'); document.getElementById('co-name')?.focus(); },120);
+}
+function confirmCheckout(id){
+  const name=document.getElementById('co-name')?.value.trim();
+  if(!name){ showToast(lang==='id'?'Isi nama peminjam':'Enter borrower name',true); return; }
+  const i=assets.findIndex(x=>x.id===id); if(i<0) return;
+  assets[i].status='borrowed'; assets[i].borrower=name; assets[i].borrowDate=Date.now();
+  addHistory(lang==='id'?`"${assets[i].name}" dipinjam oleh ${name}`:`"${assets[i].name}" borrowed by ${name}`);
+  save(); closeSheet('overlay-detail'); renderAll(); showToast(t('toast-co'));
+}
+function returnAsset(id){
+  const i=assets.findIndex(x=>x.id===id); if(i<0) return;
+  const borrower=assets[i].borrower||'';
+  assets[i].status='active'; delete assets[i].borrower; delete assets[i].borrowDate;
+  addHistory(lang==='id'?`"${assets[i].name}" dikembalikan${borrower?' oleh '+borrower:''}`:`"${assets[i].name}" returned${borrower?' by '+borrower:''}`);
+  save(); closeSheet('overlay-detail'); renderAll(); showToast(t('toast-returned'));
+}
+
+// ─── QR GENERATE ─────────────────────────────────────────────────
+function openQRSheet(id){
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  const qrData=JSON.stringify({ssb_id:a.id,sn:a.sn,name:a.name,cat:a.cat});
+  document.getElementById('qr-sheet').innerHTML=`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔳 ${t('qr-title')}</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:2px">${a.name}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${a.sn||lang==='id'?'Tanpa SN':'No SN'}</div>
+    <div class="qr-section">
+      <div class="qr-box" id="qr-canvas-wrap">
+        <div id="qr-canvas"></div>
+        <div class="qr-label">
+          <b style="font-size:12px;color:#0D47A1">${a.name}</b><br>
+          <span style="font-size:10px;color:#1565C0">${a.sn||'PT SSB'}</span><br>
+          <span style="font-size:9px;color:#4A6480">${t('loc-'+a.loc)}</span>
+        </div>
+        <div style="font-size:8px;color:#888;font-weight:600;letter-spacing:.05em">PT SULTRA SARANA BUMI</div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);text-align:center">${t('qr-hint')}</p>
+    </div>
+    <button class="btn-qr-dl" onclick="downloadQR('${id}')">${t('btn-dl-qr')}</button>
+    <button class="btn-secondary" onclick="closeSheet('overlay-qr')">${t('btn-cancel')}</button>`;
+  document.getElementById('overlay-qr').classList.add('open');
+  setTimeout(()=>{
+    try{
+      new QRCode(document.getElementById('qr-canvas'),{text:qrData,width:160,height:160,colorDark:'#0D47A1',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }catch(e){ document.getElementById('qr-canvas').innerHTML='<div style="width:160px;height:160px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:12px;color:#999">QR Error</div>'; }
+  },200);
+}
+
+function downloadQR(id){
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  const wrap=document.getElementById('qr-canvas-wrap');
+  const canvas=wrap?.querySelector('canvas');
+  if(!canvas){ showToast(lang==='id'?'QR belum siap':'QR not ready yet',true); return; }
+  // Build a combined canvas
+  const out=document.createElement('canvas');
+  out.width=200; out.height=240;
+  const ctx=out.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,200,240);
+  ctx.fillStyle='#0D47A1'; ctx.fillRect(0,0,200,8);
+  ctx.fillStyle='#0D47A1'; ctx.fillRect(0,232,200,8);
+  ctx.drawImage(canvas,20,16,160,160);
+  ctx.fillStyle='#0D47A1'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+  ctx.fillText(a.name.length>24?a.name.slice(0,22)+'..':a.name,100,192);
+  ctx.fillStyle='#1565C0'; ctx.font='10px Arial';
+  ctx.fillText(a.sn||'PT SSB',100,207);
+  ctx.fillStyle='#888'; ctx.font='9px Arial';
+  ctx.fillText('PT SULTRA SARANA BUMI',100,222);
+  const link=document.createElement('a');
+  link.download=`QR-${a.sn||a.id}-${a.name.replace(/\s+/g,'_').slice(0,20)}.png`;
+  link.href=out.toDataURL('image/png'); link.click();
+  showToast(lang==='id'?'QR Label berhasil diunduh':'QR Label downloaded');
+}
+
+// ─── QR SCANNER ──────────────────────────────────────────────────
+function initScanScreen(){
+  document.getElementById('scan-result').innerHTML='';
+  document.getElementById('btn-start-scan').style.display='block';
+  document.getElementById('btn-stop-scan').style.display='none';
+}
+function startScanner(){
+  if(qrScanner) return;
+  document.getElementById('btn-start-scan').style.display='none';
+  document.getElementById('btn-stop-scan').style.display='block';
+  document.getElementById('scan-result').innerHTML=`<p style="text-align:center;color:var(--text3);font-size:13px;padding:8px 0">${t('scan-hint')}</p>`;
+  try{
+    qrScanner=new Html5Qrcode('qr-reader');
+    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220}},onScanSuccess,()=>{}).catch(err=>{
+      showToast(lang==='id'?'Izin kamera ditolak':'Camera permission denied',true);
+      stopScanner();
+    });
+  }catch(e){ showToast(lang==='id'?'Kamera tidak tersedia':'Camera unavailable',true); stopScanner(); }
+}
+function stopScanner(){
+  if(qrScanner){ qrScanner.stop().then(()=>{ qrScanner.clear(); qrScanner=null; }).catch(()=>{ qrScanner=null; }); }
+  document.getElementById('btn-start-scan').style.display='block';
+  document.getElementById('btn-stop-scan').style.display='none';
+}
+function onScanSuccess(decoded){
+  stopScanner();
+  let asset=null;
+  try{
+    const data=JSON.parse(decoded);
+    if(data.ssb_id) asset=assets.find(a=>a.id===data.ssb_id);
+    if(!asset&&data.sn) asset=assets.find(a=>a.sn===data.sn);
+  }catch(e){
+    asset=assets.find(a=>a.sn===decoded||a.id===decoded||a.name===decoded);
+  }
+  if(asset){
+    document.getElementById('scan-result').innerHTML=`
+      <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:var(--radius);padding:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:600;color:var(--green)">${t('scan-found')}</div>
+        <div style="font-size:13px;color:var(--text);margin-top:4px">${asset.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${asset.sn||'—'} · ${t('status-'+asset.status)}</div>
+        <button class="btn-primary" style="margin-top:12px" onclick="openDetail('${asset.id}');showScreen('assets',document.querySelectorAll('.nav-btn')[1])">${lang==='id'?'Lihat Detail':'View Detail'}</button>
+      </div>`;
+  } else {
+    document.getElementById('scan-result').innerHTML=`
+      <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius);padding:14px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">❓</div>
+        <div style="font-size:14px;font-weight:600;color:var(--red)">${t('scan-not-found')}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;font-family:'JetBrains Mono',monospace;word-break:break-all">${decoded.slice(0,80)}</div>
+        <button class="btn-secondary" style="margin-top:12px" onclick="startScanner()">${lang==='id'?'Coba Lagi':'Try Again'}</button>
+      </div>`;
+  }
+}
+
+// ─── PDF REPORT ──────────────────────────────────────────────────
+function generatePDF(type){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const now=new Date();
+  const dateStr=now.toLocaleDateString(lang==='id'?'id-ID':'en-GB',{day:'2-digit',month:'long',year:'numeric'});
+
+  let filtered=assets;
+  let reportTitle=t('pdf-title');
+  let subtitle='';
+
+  if(type==='active'){ filtered=assets.filter(a=>a.status==='active'); subtitle=t('rep-active'); }
+  else if(type==='broken'){ filtered=assets.filter(a=>a.status==='broken'); subtitle=t('rep-broken'); }
+  else if(type==='borrowed'){ filtered=assets.filter(a=>a.status==='borrowed'); subtitle=t('rep-borrowed'); }
+  else if(type==='warranty'){ filtered=assets.filter(a=>a.warranty&&new Date(a.warranty)<=new Date(Date.now()+90*864e5)); subtitle=t('rep-warranty'); }
+  else if(type==='loc'){
+    const locFilter=document.getElementById('report-loc-filter')?.value;
+    if(locFilter){ filtered=assets.filter(a=>a.loc===locFilter); subtitle=t('loc-'+locFilter); }
+    else subtitle=lang==='id'?'Semua Lokasi':'All Locations';
+  }
+  else subtitle=lang==='id'?'Semua Aset':'All Assets';
+
+  // Header
+  doc.setFillColor(21,101,192); doc.rect(0,0,297,20,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text(t('pdf-title'),14,13);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(t('pdf-company'),297-14,13,{align:'right'});
+
+  // Subtitle row
+  doc.setFillColor(227,242,253); doc.rect(0,20,297,10,'F');
+  doc.setTextColor(21,101,192); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(subtitle,14,27);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+  doc.text(`${dateStr} · Total: ${filtered.length}`,297-14,27,{align:'right'});
+
+  // Stats bar
+  const total=assets.length,active=assets.filter(a=>a.status==='active').length,broken=assets.filter(a=>a.status==='broken').length,borrowed=assets.filter(a=>a.status==='borrowed').length;
+  doc.setFillColor(245,250,255); doc.rect(0,30,297,12,'F');
+  doc.setFontSize(8); doc.setTextColor(50,50,50);
+  doc.text(`${t('stat-total')}: ${total}   |   ${t('stat-active')}: ${active}   |   ${t('stat-broken')}: ${broken}   |   ${t('stat-borrowed')}: ${borrowed}`,14,38);
+
+  // Table
+  const isBorrowedReport=type==='borrowed';
+  const cols=isBorrowedReport
+    ?[t('pdf-col-no'),t('pdf-col-name'),t('pdf-col-cat'),t('pdf-col-sn'),t('pdf-col-loc'),t('pdf-borrower'),t('pdf-borrow-date'),t('pdf-col-cond')]
+    :[t('pdf-col-no'),t('pdf-col-name'),t('pdf-col-cat'),t('pdf-col-sn'),t('pdf-col-status'),t('pdf-col-loc'),t('pdf-col-user'),t('pdf-col-warranty'),t('pdf-col-cond')];
+
+  const rows=filtered.map((a,i)=>{
+    if(isBorrowedReport) return [i+1,a.name,t('cat-'+a.cat),a.sn||'—',t('loc-'+a.loc),a.borrower||'—',a.borrowDate?fmtDate(a.borrowDate):'—',t('cond-'+a.cond)];
+    return [i+1,a.name,t('cat-'+a.cat),a.sn||'—',t('status-'+a.status),t('loc-'+a.loc),a.user||'—',a.warranty||'—',t('cond-'+a.cond)];
+  });
+
+  const statusColors={[t('status-active')]:[16,185,129],[t('status-broken')]:[239,68,68],[t('status-borrowed')]:[245,158,11],[t('status-storage')]:[139,92,246]};
+
+  doc.autoTable({
+    head:[cols],body:rows,startY:44,
+    styles:{fontSize:8,cellPadding:3,font:'helvetica',textColor:[30,30,30]},
+    headStyles:{fillColor:[21,101,192],textColor:255,fontStyle:'bold',fontSize:8},
+    alternateRowStyles:{fillColor:[245,250,255]},
+    columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:60},2:{cellWidth:24},3:{cellWidth:26},4:{cellWidth:22},5:{cellWidth:26},6:{cellWidth:30},7:{cellWidth:24},8:{cellWidth:18}},
+    didParseCell(data){
+      if(data.section==='body'&&!isBorrowedReport&&data.column.index===4){
+        const color=statusColors[data.cell.raw];
+        if(color){ data.cell.styles.textColor=color; data.cell.styles.fontStyle='bold'; }
+      }
+    },
+    margin:{left:14,right:14},
+  });
+
+  // Footer
+  const pageCount=doc.getNumberOfPages();
+  for(let p=1;p<=pageCount;p++){
+    doc.setPage(p);
+    doc.setFillColor(240,246,255); doc.rect(0,193,297,12,'F');
+    doc.setFontSize(7); doc.setTextColor(130,163,196);
+    doc.text(t('pdf-generated'),14,200);
+    doc.text(`${lang==='id'?'Halaman':'Page'} ${p} / ${pageCount}`,297-14,200,{align:'right'});
+  }
+
+  const fname=`SSB-Laporan-${subtitle.replace(/\s+/g,'-')}-${now.toISOString().slice(0,10)}.pdf`;
+  doc.save(fname);
+  showToast(t('toast-pdf'));
+}
+
+// ─── SWIPE TO DELETE ─────────────────────────────────────────────
+function attachSwipe(id){
+  const item=document.getElementById('item-'+id);
+  const wrap=document.getElementById('wrap-'+id);
+  if(!item||!wrap) return;
+  let startX=0,startY=0,dx=0,swiped=false,moving=false;
+  item.addEventListener('touchstart',e=>{ startX=e.touches[0].clientX; startY=e.touches[0].clientY; dx=0; moving=false; },{passive:true});
+  item.addEventListener('touchmove',e=>{
+    dx=e.touches[0].clientX-startX;
+    const dy=Math.abs(e.touches[0].clientY-startY);
+    if(!moving&&Math.abs(dx)>dy&&Math.abs(dx)>8) moving=true;
+    if(!moving) return;
+    if(dx<0){ item.style.transform=`translateX(${Math.max(dx,-80)}px)`; item.style.transition='none'; }
+    else if(swiped&&dx>0){ item.style.transform=`translateX(${Math.min(0,dx-80)}px)`; }
+  },{passive:true});
+  item.addEventListener('touchend',()=>{
+    item.style.transition='transform .2s ease';
+    if(dx<-50){ wrap.classList.add('swiped'); swiped=true; item.style.transform=''; }
+    else{ wrap.classList.remove('swiped'); swiped=false; item.style.transform=''; }
+    moving=false;
+  });
+  // tap outside swiped = close
+  document.addEventListener('touchstart',e=>{ if(swiped&&!wrap.contains(e.target)){ wrap.classList.remove('swiped'); swiped=false; } },{passive:true});
+}
+
+function quickDelete(id){
+  const a=assets.find(x=>x.id===id); if(!a) return;
+  if(!confirm(`${lang==='id'?'Hapus aset':'Delete asset'} "${a.name}"?`)) return;
+  const wrap=document.getElementById('wrap-'+id);
+  if(wrap){ wrap.classList.add('deleting'); setTimeout(()=>{ doDelete(id); },280); }
+  else doDelete(id);
+}
+function doDelete(id){
+  const a=assets.find(x=>x.id===id);
+  assets=assets.filter(x=>x.id!==id);
+  addHistory(lang==='id'?`Aset "${a?.name}" dihapus`:`Asset "${a?.name}" deleted`);
+  save(); renderAll(); showToast(t('toast-deleted'));
+}
+
+// ─── DELETE BY FILTER ─────────────────────────────────────────────
+function initDeleteSelects(){
+  const sts=[{v:'',l:lang==='id'?'-- Status --':'-- Status --'},{v:'active',l:t('status-active')},{v:'broken',l:t('status-broken')},{v:'borrowed',l:t('status-borrowed')},{v:'storage',l:t('status-storage')}];
+  const locs=[{v:'',l:lang==='id'?'-- Lokasi --':'-- Location --'},{v:'office',l:t('loc-office')},{v:'site',l:t('loc-site')},{v:'mess',l:t('loc-mess')},{v:'workshop',l:t('loc-workshop')},{v:'other',l:t('loc-other')}];
+  const ds=document.getElementById('del-status-sel'); if(ds) ds.innerHTML=sts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+  const dl=document.getElementById('del-loc-sel'); if(dl) dl.innerHTML=locs.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+  ['del-status-sel','del-loc-sel'].forEach(id=>{ const el=document.getElementById(id); if(el) el.onchange=updateDelPreview; });
+  updateDelPreview();
+}
+function updateDelPreview(){
+  const st=document.getElementById('del-status-sel')?.value||'';
+  const loc=document.getElementById('del-loc-sel')?.value||'';
+  const count=assets.filter(a=>((!st)||a.status===st)&&((!loc)||a.loc===loc)).length;
+  const el=document.getElementById('del-preview');
+  if(el){ el.textContent=lang==='id'?`${count} aset akan dihapus`:`${count} assets will be deleted`; el.style.color=count>0?'var(--red)':'var(--text3)'; }
+}
+function deleteByFilter(){
+  const st=document.getElementById('del-status-sel')?.value||'';
+  const loc=document.getElementById('del-loc-sel')?.value||'';
+  const toDelete=assets.filter(a=>((!st)||a.status===st)&&((!loc)||a.loc===loc));
+  if(!toDelete.length){ showToast(lang==='id'?'Tidak ada aset yang cocok':'No matching assets',false,true); return; }
+  if(!confirm(lang==='id'?`Hapus ${toDelete.length} aset? Tidak bisa dibatalkan.`:`Delete ${toDelete.length} assets? Cannot be undone.`)) return;
+  const ids=new Set(toDelete.map(a=>a.id));
+  assets=assets.filter(a=>!ids.has(a.id));
+  addHistory(lang==='id'?`${toDelete.length} aset dihapus via filter`:`${toDelete.length} assets deleted via filter`);
+  save(); renderAll(); updateDelPreview();
+  showToast(lang==='id'?`${toDelete.length} aset dihapus`:`${toDelete.length} assets deleted`);
+}
+
+// ─── CLEAR HISTORY ────────────────────────────────────────────────
+function confirmClearHistory(){
+  if(!confirm(lang==='id'?'Hapus semua riwayat aktivitas?':'Clear all activity history?')) return;
+  history=[]; save(); renderDashboard();
+  showToast(lang==='id'?'Riwayat aktivitas dihapus':'Activity history cleared');
+}
+function closeSheet(id){ document.getElementById(id).classList.remove('open'); }
+function closeIfBg(e,id){ if(e.target===document.getElementById(id)) closeSheet(id); }
+function showToast(msg,err=false,info=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast'+(err?' err':info?' info':'');
+  setTimeout(()=>el.classList.add('show'),10);
+  setTimeout(()=>el.classList.remove('show'),2600);
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify({assets,history,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`ssb-assets-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  showToast(t('toast-exported'));
+}
+function importData(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{ try{ const d=JSON.parse(ev.target.result); assets=d.assets||[]; history=d.history||[]; save(); renderAll(); showToast(t('toast-imported')); }catch(ex){ showToast(lang==='id'?'File tidak valid':'Invalid file',true); } };
+  r.readAsText(f); e.target.value='';
+}
+function confirmClear(){ if(!confirm(t('confirm-clear'))) return; assets=[]; history=[]; save(); renderAll(); showToast(t('toast-cleared')); }
+
+// ─── PWA ─────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; document.getElementById('install-banner').style.display='flex'; });
+window.addEventListener('appinstalled',()=>{ document.getElementById('install-banner').style.display='none'; });
+function triggerInstall(){ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById('install-banner').style.display='none'; }); } }
+
+// ─── INIT ─────────────────────────────────────────────────────────
+seedDemo();
+rebuildFilterSelects();
+rebuildLocOptions();
+applyLang();
+renderDashboard();
+</script>
+</body>
+</html>
