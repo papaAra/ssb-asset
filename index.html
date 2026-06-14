@@ -214,9 +214,79 @@ select.field-input option{background:var(--surface)}
 .sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .sec-header h3{font-size:14px;font-weight:600}
 .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-logo{font-size:52px;margin-bottom:8px}
+.login-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;text-align:center}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;text-align:center}
+.role-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;margin-bottom:20px}
+.role-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:14px 10px;text-align:center;cursor:pointer;transition:.15s}
+.role-card.sel{border-color:var(--blue-500);background:rgba(33,150,243,.08)}
+.role-icon{font-size:28px;margin-bottom:5px}
+.role-name{font-size:13px;font-weight:600;color:var(--text)}
+.role-desc{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:100%;max-width:340px}
+.login-lbl{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.06em}
+.login-inp{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:15px;padding:11px 13px;border-radius:var(--radius-sm);margin-bottom:12px;transition:.2s}
+.login-inp:focus{border-color:var(--blue-500)}
+.login-inp::placeholder{color:var(--text3)}
+.login-btn{width:100%;background:var(--blue-600);color:white;font-size:15px;font-weight:600;padding:13px;border-radius:var(--radius-sm);border:none;cursor:pointer;margin-top:2px}
+.login-btn:active{background:var(--blue-700)}
+.login-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;min-height:16px}
+
+/* USER BADGE */
+.user-badge{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 10px 4px 5px;cursor:pointer;transition:.15s}
+.user-badge:active{background:var(--surface3)}
+.u-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.u-avatar.admin{background:rgba(33,150,243,.25);color:var(--blue-200)}
+.u-avatar.viewer{background:rgba(16,185,129,.2);color:var(--green)}
+.u-name{font-size:11px;font-weight:500;color:var(--text2);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ROLE-BASED VISIBILITY */
+.admin-only{display:none!important}
+body.is-admin .admin-only{display:block!important}
+body.is-admin .admin-only-flex{display:flex!important}
+.admin-only-flex{display:none!important}
+body.is-admin .fab{display:flex!important}
+body.is-viewer .fab{display:none!important}
+.viewer-bar{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:var(--radius-sm);padding:9px 14px;font-size:12px;color:var(--yellow);text-align:center;margin-bottom:12px;display:none}
+body.is-viewer .viewer-bar{display:block}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-logo">🖥️</div>
+  <div class="login-title">SSB Asset Manager</div>
+  <div class="login-sub">PT Sultra Sarana Bumi · Pilih akses login</div>
+  <div class="role-row">
+    <div class="role-card sel" id="role-admin-card" onclick="selectRole('admin')">
+      <div class="role-icon">🔧</div>
+      <div class="role-name">IT Admin</div>
+      <div class="role-desc">Full akses — tambah, edit, hapus, laporan</div>
+    </div>
+    <div class="role-card" id="role-viewer-card" onclick="selectRole('viewer')">
+      <div class="role-icon">👁️</div>
+      <div class="role-name">Viewer</div>
+      <div class="role-desc">Lihat daftar & detail aset saja</div>
+    </div>
+  </div>
+  <div class="login-box">
+    <label class="login-lbl">Username</label>
+    <input class="login-inp" id="login-user" placeholder="Masukkan username" autocomplete="off">
+    <label class="login-lbl">Password</label>
+    <input class="login-inp" id="login-pass" type="password" placeholder="Masukkan password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Masuk →</button>
+    <div class="login-err" id="login-err"></div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:12px;line-height:1.6">
+      Default IT Admin: <b style="color:var(--text2)">admin / ssb2024</b><br>
+      Default Viewer: <b style="color:var(--text2)">viewer / ssb123</b>
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
 <!-- TOPBAR -->
@@ -227,6 +297,10 @@ select.field-input option{background:var(--surface)}
     <span class="topbar-ver" id="lang-badge">ID</span>
   </div>
   <div class="topbar-right">
+    <div class="user-badge" onclick="confirmLogout()" id="user-badge-el" title="Tap untuk logout">
+      <div class="u-avatar admin" id="u-avatar-el">A</div>
+      <span class="u-name" id="u-name-el">Admin</span>
+    </div>
     <button class="lang-btn" onclick="toggleLang()" id="lang-toggle">EN</button>
   </div>
 </div>
@@ -248,6 +322,7 @@ select.field-input option{background:var(--surface)}
 <!-- SCREEN: ASSETS -->
 <div id="screen-assets" class="screen">
   <div class="p16">
+    <div class="viewer-bar">👁️ Mode Viewer — hanya bisa melihat data aset</div>
     <div class="search-wrap">
       <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input class="search-input" id="search-input" placeholder="Cari aset, SN, user..." oninput="renderAssets()">
@@ -341,29 +416,44 @@ select.field-input option{background:var(--surface)}
       <div class="detail-row"><span class="detail-key">Version</span><span class="detail-val" style="font-family:'JetBrains Mono',monospace;font-size:11px">v2.1 · PT SSB</span></div>
     </div>
 
-    <div class="section-label mt12" data-id="label-backup">Backup & Restore</div>
-    <div class="card">
+    <div class="section-label mt12 admin-only" data-id="label-backup">Backup & Restore</div>
+    <div class="card admin-only">
       <button class="btn-secondary" style="margin:0 0 8px" onclick="exportData()" data-id="btn-export">📤 Export Data (JSON)</button>
       <button class="btn-secondary" style="margin:0" onclick="document.getElementById('import-file').click()" data-id="btn-import">📥 Import Data (JSON)</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
     </div>
 
-    <div class="section-label mt12" data-id="label-delete-section">Hapus Data</div>
-    <div class="card">
+    <div class="section-label mt12 admin-only" data-id="label-delete-section">Hapus Data</div>
+    <div class="card admin-only">
       <div class="section-label" style="margin-bottom:8px;font-size:10px" data-id="label-del-filter">Hapus Aset Berdasarkan Filter</div>
       <div class="field-row" style="margin-bottom:8px">
-        <select class="filter-select" id="del-status-sel" style="font-size:12px;padding:8px">
-          <option value="">-- Status --</option>
-        </select>
-        <select class="filter-select" id="del-loc-sel" style="font-size:12px;padding:8px">
-          <option value="">-- Lokasi --</option>
-        </select>
+        <select class="filter-select" id="del-status-sel" style="font-size:12px;padding:8px"></select>
+        <select class="filter-select" id="del-loc-sel" style="font-size:12px;padding:8px"></select>
       </div>
       <div id="del-preview" style="font-size:12px;color:var(--text3);margin-bottom:8px;min-height:18px"></div>
       <button class="btn-danger" style="margin:0 0 10px" onclick="deleteByFilter()" data-id="btn-del-filter">🗑️ Hapus Aset Terfilter</button>
       <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
       <button class="btn-secondary" style="margin:0 0 8px;color:var(--yellow)" onclick="confirmClearHistory()" data-id="btn-clear-history">🧹 Hapus Riwayat Aktivitas</button>
       <button class="btn-danger" style="margin:0" onclick="confirmClear()" data-id="btn-clear">⚠️ Hapus SEMUA Data</button>
+    </div>
+
+    <div class="section-label mt12 admin-only">Manajemen Akun</div>
+    <div class="card admin-only">
+      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px">🔑 Ganti Password</div>
+      <div class="field-row" style="margin-bottom:8px">
+        <div>
+          <label class="field-label">Role</label>
+          <select class="field-input" id="chpw-role" style="font-size:13px">
+            <option value="admin">IT Admin</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Password Baru</label>
+          <input class="field-input" id="chpw-new" type="password" placeholder="Password baru" style="font-size:13px">
+        </div>
+      </div>
+      <button class="btn-secondary" style="margin:0" onclick="changePassword()">💾 Simpan Password</button>
     </div>
 
     <div class="mt12 card" style="background:var(--surface2)">
@@ -464,12 +554,85 @@ select.field-input option{background:var(--surface)}
 
 <script>
 // ─── DATA ────────────────────────────────────────────────────────
-const SK='ssb_assets_v3', HK='ssb_history_v3';
+const SK='ssb_assets_v3', HK='ssb_history_v3', PK='ssb_passwords_v1';
 let lang=localStorage.getItem('ssb_lang')||'id';
 let assets=JSON.parse(localStorage.getItem(SK)||'[]');
 let history=JSON.parse(localStorage.getItem(HK)||'[]');
 let editingId=null, activeCategory='all', filterActive={cat:'',status:'',loc:'',cond:''};
 let qrScanner=null, deferredPrompt=null;
+
+// ─── AUTH ─────────────────────────────────────────────────────────
+let currentUser=null, currentRole=null, selectedLoginRole='admin';
+const DEFAULT_PASSWORDS={admin:'ssb2024',viewer:'ssb123'};
+function getPasswords(){ return JSON.parse(localStorage.getItem(PK)||JSON.stringify(DEFAULT_PASSWORDS)); }
+function savePasswords(p){ localStorage.setItem(PK,JSON.stringify(p)); }
+
+function selectRole(role){
+  selectedLoginRole=role;
+  document.getElementById('role-admin-card').classList.toggle('sel',role==='admin');
+  document.getElementById('role-viewer-card').classList.toggle('sel',role==='viewer');
+  document.getElementById('login-err').textContent='';
+}
+
+function doLogin(){
+  const user=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const passwords=getPasswords();
+  const errEl=document.getElementById('login-err');
+  if(!user){ errEl.textContent='Username tidak boleh kosong'; return; }
+  if(!pass){ errEl.textContent='Password tidak boleh kosong'; return; }
+  // Admin check
+  if(selectedLoginRole==='admin'){
+    if(pass===passwords.admin){ loginSuccess(user,'admin'); return; }
+    else{ errEl.textContent='Password IT Admin salah'; return; }
+  }
+  // Viewer check
+  if(selectedLoginRole==='viewer'){
+    if(pass===passwords.viewer){ loginSuccess(user,'viewer'); return; }
+    else{ errEl.textContent='Password Viewer salah'; return; }
+  }
+}
+
+function loginSuccess(user,role){
+  currentUser=user; currentRole=role;
+  sessionStorage.setItem('ssb_session',JSON.stringify({user,role}));
+  document.getElementById('login-screen').style.display='none';
+  // apply role to body
+  document.body.classList.remove('is-admin','is-viewer');
+  document.body.classList.add(role==='admin'?'is-admin':'is-viewer');
+  // update badge
+  const av=document.getElementById('u-avatar-el');
+  av.textContent=user.charAt(0).toUpperCase();
+  av.className='u-avatar '+(role==='admin'?'admin':'viewer');
+  document.getElementById('u-name-el').textContent=user;
+  renderAll();
+}
+
+function confirmLogout(){
+  if(!confirm(lang==='id'?`Logout dari akun "${currentUser}"?`:`Logout from "${currentUser}"?`)) return;
+  sessionStorage.removeItem('ssb_session');
+  currentUser=null; currentRole=null;
+  document.body.classList.remove('is-admin','is-viewer');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').textContent='';
+}
+
+function changePassword(){
+  const role=document.getElementById('chpw-role').value;
+  const np=document.getElementById('chpw-new').value;
+  if(!np||np.length<4){ showToast(lang==='id'?'Password minimal 4 karakter':'Password min 4 chars',true); return; }
+  const p=getPasswords(); p[role]=np; savePasswords(p);
+  document.getElementById('chpw-new').value='';
+  showToast(lang==='id'?`Password ${role==='admin'?'Admin':'Viewer'} berhasil diubah`:`${role==='admin'?'Admin':'Viewer'} password updated`);
+}
+
+function checkSession(){
+  const s=sessionStorage.getItem('ssb_session');
+  if(s){ try{ const d=JSON.parse(s); loginSuccess(d.user,d.role); return true; }catch(e){} }
+  return false;
+}
 
 // ─── TRANSLATIONS ────────────────────────────────────────────────
 const T={
@@ -809,8 +972,8 @@ function openDetail(id){
       ${a.note?`<div class="detail-row"><span class="detail-key">${lang==='id'?'Catatan':'Notes'}</span><span class="detail-val" style="font-size:12px">${a.note}</span></div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn-secondary" style="margin:0" onclick="openEditSheet('${id}')">✏️ ${t('btn-edit')}</button>
-      <button class="btn-secondary" style="margin:0;${isBorrowed?'color:var(--green)':''}" onclick="${isBorrowed?`returnAsset('${id}')`:`openCheckoutSheet('${id}')`}">
+      <button class="btn-secondary admin-only" style="margin:0" onclick="openEditSheet('${id}')">✏️ ${t('btn-edit')}</button>
+      <button class="btn-secondary admin-only" style="margin:0;${isBorrowed?'color:var(--green)':''}" onclick="${isBorrowed?`returnAsset('${id}')`:`openCheckoutSheet('${id}')`}">
         ${isBorrowed?'↩️ '+t('btn-return'):'📤 '+t('btn-checkout')}</button>
     </div>
     <button class="btn-secondary" style="color:var(--blue-400)" onclick="openQRSheet('${id}')">${t('btn-view-qr')}</button>`;
@@ -1160,7 +1323,10 @@ seedDemo();
 rebuildFilterSelects();
 rebuildLocOptions();
 applyLang();
-renderDashboard();
+if(!checkSession()){
+  // show login screen, hide app content
+  document.getElementById('login-screen').style.display='flex';
+}
 </script>
 </body>
 </html>
