@@ -1453,8 +1453,14 @@ function addHistoryAndQueue(desc){
 window.addEventListener('online',()=>{ setSyncStatus('syncing'); syncNow(true); });
 window.addEventListener('offline',()=>{ setSyncStatus('offline'); });
 
-// periodic sync every 30s when online
-setInterval(()=>{ if(navigator.onLine&&syncStatus!=='syncing') syncNow(true); },30000);
+// auto pull when tab becomes visible again (user switches back to app)
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&navigator.onLine) syncNow(true); });
+
+// auto pull when window gets focus (switch from other app/tab)
+window.addEventListener('focus',()=>{ if(navigator.onLine) syncNow(true); });
+
+// periodic sync every 15s when online
+setInterval(()=>{ if(navigator.onLine&&syncStatus!=='syncing') syncNow(true); },15000);
 
 // ─── PWA ─────────────────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; document.getElementById('install-banner').style.display='flex'; });
