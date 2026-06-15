@@ -293,6 +293,9 @@ body.is-viewer .viewer-bar{display:block}
     <span class="topbar-ver" id="lang-badge">ID</span>
   </div>
   <div class="topbar-right">
+    <div id="sync-indicator" onclick="syncNow()" style="display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 10px;cursor:pointer" title="Tap untuk sync">
+      <span style="font-size:13px">☁️</span><span style="font-size:11px;color:var(--text3);font-weight:500">Siap</span>
+    </div>
     <div class="user-badge" onclick="confirmLogout()" id="user-badge-el" title="Tap untuk logout">
       <div class="u-avatar admin" id="u-avatar-el">A</div>
       <span class="u-name" id="u-name-el">Admin</span>
@@ -602,6 +605,8 @@ function loginSuccess(user,role){
   av.className='u-avatar '+(role==='admin'?'admin':'viewer');
   document.getElementById('u-name-el').textContent=user;
   renderAll();
+  // sync on login
+  if(navigator.onLine) syncNow(true); else setSyncStatus('offline');
 }
 
 function confirmLogout(){
@@ -931,6 +936,8 @@ function saveAsset(){
   else assets.unshift(a);
   addHistory(lang==='id'?`Aset "${name}" ${editingId?'diperbarui':'ditambahkan'}`:`Asset "${name}" ${editingId?'updated':'added'}`);
   save(); closeSheet('overlay-add'); renderAll(); showToast(t('toast-saved'));
+  // push to supabase
+  queueOrPush({type:'upsert',data:a});
 }
 function deleteAsset(){
   if(!editingId||!confirm(t('confirm-delete'))) return;
@@ -1000,6 +1007,7 @@ function confirmCheckout(id){
   assets[i].status='borrowed'; assets[i].borrower=name; assets[i].borrowDate=Date.now();
   addHistory(lang==='id'?`"${assets[i].name}" dipinjam oleh ${name}`:`"${assets[i].name}" borrowed by ${name}`);
   save(); closeSheet('overlay-detail'); renderAll(); showToast(t('toast-co'));
+  queueOrPush({type:'upsert',data:assets[i]});
 }
 function returnAsset(id){
   const i=assets.findIndex(x=>x.id===id); if(i<0) return;
@@ -1007,6 +1015,7 @@ function returnAsset(id){
   assets[i].status='active'; delete assets[i].borrower; delete assets[i].borrowDate;
   addHistory(lang==='id'?`"${assets[i].name}" dikembalikan${borrower?' oleh '+borrower:''}`:`"${assets[i].name}" returned${borrower?' by '+borrower:''}`);
   save(); closeSheet('overlay-detail'); renderAll(); showToast(t('toast-returned'));
+  queueOrPush({type:'upsert',data:assets[i]});
 }
 
 // ─── QR GENERATE ─────────────────────────────────────────────────
@@ -1241,6 +1250,7 @@ function doDelete(id){
   assets=assets.filter(x=>x.id!==id);
   addHistory(lang==='id'?`Aset "${a?.name}" dihapus`:`Asset "${a?.name}" deleted`);
   save(); renderAll(); showToast(t('toast-deleted'));
+  queueOrPush({type:'delete',id});
 }
 
 // ─── DELETE BY FILTER ─────────────────────────────────────────────
@@ -1300,6 +1310,152 @@ function importData(e){
 }
 function confirmClear(){ if(!confirm(t('confirm-clear'))) return; assets=[]; history=[]; save(); renderAll(); showToast(t('toast-cleared')); }
 
+// ─── SUPABASE SYNC ────────────────────────────────────────────────
+const SB_URL='https://qocugzrlymukyvnrmygo.supabase.co';
+const SB_KEY='sb_publishable_IgGOVaH3gRRqjvAm5dYoJw_Ppzb7fao';
+const SB_HEADERS={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+let syncStatus='idle'; // idle | syncing | online | offline | error
+let syncQueue=JSON.parse(localStorage.getItem('ssb_sync_queue')||'[]'); // pending ops when offline
+let lastSyncAt=localStorage.getItem('ssb_last_sync')||null;
+
+function saveQueue(){ localStorage.setItem('ssb_sync_queue',JSON.stringify(syncQueue)); }
+
+function setSyncStatus(s){
+  syncStatus=s;
+  const el=document.getElementById('sync-indicator');
+  if(!el) return;
+  const map={
+    idle:{icon:'☁️',color:'var(--text3)',label:lang==='id'?'Siap':'Ready'},
+    syncing:{icon:'🔄',color:'var(--blue-400)',label:lang==='id'?'Sinkronisasi...':'Syncing...'},
+    online:{icon:'✅',color:'var(--green)',label:lang==='id'?'Tersinkron':'Synced'},
+    offline:{icon:'📴',color:'var(--yellow)',label:lang==='id'?'Offline':'Offline'},
+    error:{icon:'⚠️',color:'var(--red)',label:lang==='id'?'Gagal sync':'Sync failed'},
+  };
+  const m=map[s]||map.idle;
+  el.innerHTML=`<span style="font-size:13px">${m.icon}</span><span style="font-size:11px;color:${m.color};font-weight:500">${m.label}</span>`;
+}
+
+// push single asset to supabase
+async function pushAsset(asset){
+  const body={...asset};
+  // rename reserved word 'user'
+  body.user_pic=body.user; delete body.user;
+  body.borrowdate=body.borrowDate; delete body.borrowDate;
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/assets?id=eq.${asset.id}`,{method:'GET',headers:SB_HEADERS});
+    const existing=await r.json();
+    if(existing&&existing.length>0){
+      await fetch(`${SB_URL}/rest/v1/assets?id=eq.${asset.id}`,{method:'PATCH',headers:{...SB_HEADERS,'Prefer':'return=minimal'},body:JSON.stringify(body)});
+    } else {
+      await fetch(`${SB_URL}/rest/v1/assets`,{method:'POST',headers:{...SB_HEADERS,'Prefer':'return=minimal'},body:JSON.stringify(body)});
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+async function deleteAssetRemote(id){
+  try{
+    await fetch(`${SB_URL}/rest/v1/assets?id=eq.${id}`,{method:'DELETE',headers:SB_HEADERS});
+    return true;
+  }catch(e){ return false; }
+}
+
+async function pushLog(log){
+  try{
+    await fetch(`${SB_URL}/rest/v1/activity_log`,{method:'POST',headers:{...SB_HEADERS,'Prefer':'return=minimal'},body:JSON.stringify({id:log.id,description:log.desc,time:log.time})});
+    return true;
+  }catch(e){ return false; }
+}
+
+// pull all assets from supabase → merge into local
+async function pullFromSupabase(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/assets?select=*&order=created.desc`,{headers:SB_HEADERS});
+    if(!r.ok) return false;
+    const rows=await r.json();
+    if(!rows||!rows.length) return true;
+    // merge: remote wins on conflict (updated timestamp)
+    rows.forEach(row=>{
+      const remote={
+        id:row.id, name:row.name, cat:row.cat, status:row.status,
+        sn:row.sn, loc:row.loc, cond:row.cond, user:row.user_pic,
+        brand:row.brand, year:row.year, warranty:row.warranty,
+        note:row.note, borrower:row.borrower, borrowDate:row.borrowdate,
+        created:row.created, updated:row.updated,
+      };
+      const idx=assets.findIndex(a=>a.id===row.id);
+      if(idx===-1){ assets.push(remote); }
+      else if((remote.updated||0)>(assets[idx].updated||0)){ assets[idx]=remote; }
+    });
+    save(); return true;
+  }catch(e){ return false; }
+}
+
+// flush pending queue when back online
+async function flushQueue(){
+  if(!syncQueue.length) return;
+  const failed=[];
+  for(const op of syncQueue){
+    let ok=false;
+    if(op.type==='upsert') ok=await pushAsset(op.data);
+    else if(op.type==='delete') ok=await deleteAssetRemote(op.id);
+    else if(op.type==='log') ok=await pushLog(op.data);
+    if(!ok) failed.push(op);
+  }
+  syncQueue=failed; saveQueue();
+}
+
+// main sync entry point
+async function syncNow(silent=false){
+  if(syncStatus==='syncing') return;
+  setSyncStatus('syncing');
+  if(!silent) showToast(lang==='id'?'Sinkronisasi...':'Syncing...',false,true);
+  try{
+    await flushQueue();
+    const ok=await pullFromSupabase();
+    if(ok){
+      lastSyncAt=new Date().toISOString(); localStorage.setItem('ssb_last_sync',lastSyncAt);
+      setSyncStatus('online'); renderAll();
+      if(!silent) showToast(lang==='id'?'Data tersinkron ✅':'Data synced ✅');
+    } else { setSyncStatus('error'); }
+  }catch(e){ setSyncStatus('error'); }
+}
+
+// queue op when offline, attempt push if online
+async function queueOrPush(op){
+  syncQueue.push(op); saveQueue();
+  if(navigator.onLine){ await flushQueue(); if(!syncQueue.length) setSyncStatus('online'); }
+  else setSyncStatus('offline');
+}
+
+// override save to also queue sync
+const _origSave=save;
+function save(){
+  localStorage.setItem(SK,JSON.stringify(assets));
+  localStorage.setItem(HK,JSON.stringify(history));
+}
+
+// wrap saveAsset to push after local save
+const _origSaveAsset=saveAsset;
+async function saveAssetAndSync(){
+  // saveAsset() already called from button — we hook after
+}
+
+// hook addHistory to also queue log
+const _origAddHistory=addHistory;
+function addHistoryAndQueue(desc){
+  const entry={id:uid(),desc,time:Date.now()};
+  history.unshift(entry); if(history.length>60) history=history.slice(0,60);
+  queueOrPush({type:'log',data:entry});
+}
+
+// online/offline events
+window.addEventListener('online',()=>{ setSyncStatus('syncing'); syncNow(true); });
+window.addEventListener('offline',()=>{ setSyncStatus('offline'); });
+
+// periodic sync every 30s when online
+setInterval(()=>{ if(navigator.onLine&&syncStatus!=='syncing') syncNow(true); },30000);
+
 // ─── PWA ─────────────────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; document.getElementById('install-banner').style.display='flex'; });
 window.addEventListener('appinstalled',()=>{ document.getElementById('install-banner').style.display='none'; });
@@ -1320,9 +1476,9 @@ rebuildFilterSelects();
 rebuildLocOptions();
 applyLang();
 if(!checkSession()){
-  // show login screen, hide app content
   document.getElementById('login-screen').style.display='flex';
 }
+// initial sync after login handled in loginSuccess
 </script>
 </body>
 </html>
